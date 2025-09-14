@@ -1,29 +1,49 @@
 onsuccess: next_stage
 pattern_syntax:
-  SFTPGO_TIME: '%{YEAR}-%{MONTHNUM}-%{MONTHDAY}T%{HOUR}:%{MINUTE}:%{SECOND}\.%{NUMBER}'
-  SFTPGO_FAILED: '\{"level":"%{WORD:log_level}","time":"%{SFTPGO_TIME:evt_time}","sender":"connection_failed","client_ip":"%{IPV4:client_ip}","username":"%{DATA:username}","login_type":"%{DATA:login_type}","protocol":"%{WORD:protocol}","error":"%{GREEDYDATA:error}"\}'
-filter: evt.Parsed.program == 'sftpgo'
+  SFTPGO_TIME: '%{YEAR}-%{MONTHNUM}-%{MONTHDAY}T%{HOUR}:%{MINUTE}:%{SECOND}(\.%{NUMBER})?Z'
+  SFTPGO_JSON: '\{%{GREEDYDATA:json_data}\}'
 nodes:
   - grok:
-      name: SFTPGO_FAILED
+      name: SFTPGO_JSON
       apply_on: message
+      condition: 'evt.Parsed.json_data =~ "connection_failed"'
       statics:
         - meta: log_type
           value: sftpgo_auth
         - meta: source_ip
-          expression: evt.Parsed.client_ip
+          expression: 'parse_json(evt.Parsed.json_data).client_ip'
         - meta: target_user
-          expression: evt.Parsed.username
+          expression: 'parse_json(evt.Parsed.json_data).username'
         - meta: protocol
-          expression: evt.Parsed.protocol
+          expression: 'parse_json(evt.Parsed.json_data).protocol'
         - meta: login_type
-          expression: evt.Parsed.login_type
+          expression: 'parse_json(evt.Parsed.json_data).login_type'
         - meta: error
-          expression: evt.Parsed.error
+          expression: 'parse_json(evt.Parsed.json_data).error'
         - meta: is_failed_login
           value: true
         - target: evt.StrTime
-          expression: evt.Parsed.evt_time
+          expression: 'parse_json(evt.Parsed.json_data).time'
         - meta: service
           value: sftpgo
-description: Parse SFTPGo authentication logs (failed attempts only)
+  - grok:
+      name: SFTPGO_JSON
+      apply_on: message
+      condition: 'evt.Parsed.json_data =~ "login"'
+      statics:
+        - meta: log_type
+          value: sftpgo_auth
+        - meta: source_ip
+          expression: 'parse_json(evt.Parsed.json_data).remote_address'
+        - meta: target_user
+          expression: 'parse_json(evt.Parsed.json_data).username'
+        - meta: protocol
+          expression: 'parse_json(evt.Parsed.json_data).protocol'
+        - meta: status
+          expression: 'parse_json(evt.Parsed.json_data).status'
+        - target: evt.StrTime
+          expression: 'parse_json(evt.Parsed.json_data).time'
+        - meta: service
+          value: sftpgo
+description: Parse SFTPGo authentication logs (failed and successful attempts)
+name: Azlaroc/sftpgo-logs

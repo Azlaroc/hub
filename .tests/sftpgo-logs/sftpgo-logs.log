@@ -1,0 +1,2 @@
+{"level":"debug","time":"2025-09-12T00:41:00Z","sender":"connection_failed","client_ip":"80.94.95.115","username":"admin","login_type":"password","protocol":"SSH","error":"not found: sql: no rows in result set"}
+{"level":"info","time":"2025-09-12T00:41:01Z","sender":"sftpgo","message":"login attempt","username":"testuser","remote_address":"5.6.7.8","operation":"login","status":"success"}
